@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image to Art Style Prompt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#faf9f6;--card:#fff;--ink:#16161a;--mute:#6b6b73;--line:#e4e2dc;--accent:#1d3d8f;--soft:#f3f2ee}
+@media (prefers-color-scheme:dark){:root{--bg:#141416;--card:#1c1c20;--ink:#f0eee9;--mute:#9a9aa3;--line:#2c2c32;--accent:#7f9cf5;--soft:#232328}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:32px 20px 64px}
+header{display:flex;gap:16px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;margin-bottom:24px}
+h1{font:400 38px/1.1 Newsreader,Georgia,serif;margin:0 0 8px}
+header p{margin:0;color:var(--mute);max-width:440px}
+.tools{display:flex;gap:8px;align-items:center}
+.seg{display:flex;background:var(--soft);border-radius:10px;padding:4px}
+button{font:inherit;cursor:pointer;border:0;color:inherit;background:none}
+.seg button{padding:7px 14px;border-radius:7px;color:var(--mute)}
+.seg button[aria-pressed=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.ghost{border:1px solid var(--line);border-radius:10px;padding:9px 14px;background:var(--card)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
+.label{font-size:13px;color:var(--mute);margin-bottom:10px;display:block}
+.drop{border:1.5px dashed var(--line);border-radius:12px;min-height:180px;display:grid;place-items:center;text-align:center;padding:16px;color:var(--mute);cursor:pointer}
+.drop{position:relative;overflow:hidden}.drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:0}.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.drop.over{border-color:var(--accent);background:var(--soft)}
+.drop img{max-width:100%;max-height:420px;border-radius:8px;display:block;margin:0 auto 12px}
+.dark{background:var(--ink);color:var(--bg);border-radius:9px;padding:10px 16px;font-weight:500}
+.row{display:flex;gap:8px}
+input{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+input:focus-visible,button:focus-visible,.drop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#keyBox{display:none}
+#keyBox small,.note{color:var(--mute);font-size:13px;display:block;margin-top:8px}
+#keyBox a{color:var(--accent)}
+#status{min-height:22px;color:var(--mute);font-size:14px;margin:0 0 12px}
+#status.err{color:#c0392b}
+.meta{color:var(--mute);font-size:14px;margin:0}
+#rName{font:400 30px/1.2 Newsreader,Georgia,serif;margin:4px 0 14px}
+.sw{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:14px;font-size:14px}
+.sw span{display:inline-flex;align-items:center;gap:7px}
+.sw i{width:14px;height:14px;border-radius:3px;border:1px solid var(--line)}
+.sw code{color:var(--mute);font-size:12px}
+.kv{margin:0 0 8px;font-size:14px}
+.kv b{font-weight:500}
+.box{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:16px}
+.box h2{font-size:14px;font-weight:500;margin:0}
+.box .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.box p{margin:0;font:13.5px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+.copy{border-radius:9px;padding:8px 13px;font-size:14px;border:1px solid var(--line);background:var(--card)}
+.copy.main{background:var(--accent);border-color:var(--accent);color:#fff}
+[hidden]{display:none!important}
+@media (max-width:520px){h1{font-size:32px}.row{flex-direction:column}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Image to Art Style Prompt</h1>
+      <p>Upload an image or paste an image link to read its visual style and copy ready-made prompts.</p>
+    </div>
+    <div class="tools">
+      <div class="seg" role="group" aria-label="Analysis mode">
+        <button id="mScan" aria-pressed="true">Free Visual Scan</button>
+        <button id="mAI" aria-pressed="false">Gemini AI</button>
+      </div>
+      <button class="ghost" id="clear">Clear</button>
+    </div>
+  </header>
+
+  <section class="card">
+    <span class="label">Upload image</span>
+    <label class="drop" id="drop">
+      <div id="dropIn">Tap to choose an image, or drop / paste one here</div>
+      <input type="file" id="file" accept="image/*" aria-label="Upload image">
+    </label>
+  </section>
+
+  <section class="card">
+    <span class="label">Insert image link</span>
+    <div class="row">
+      <input id="url" type="url" placeholder="https://example.com/image.jpg" aria-label="Image link">
+      <button class="dark" id="goLink">Analyze</button>
+    </div>
+    <span class="note">Paste a Pinterest Copy link (pin.it), a pin page or a direct image link. It analyzes right after you paste. If a link fails, use Download image in Pinterest and upload the file.</span>
+  </section>
+
+  <section class="card" id="keyBox">
+    <span class="label">Gemini API key</span>
+    <div class="row">
+      <input id="key" type="password" placeholder="Paste your key" autocomplete="off" aria-label="Gemini API key">
+      <button class="dark" id="goAI">Analyze with Gemini</button>
+    </div>
+    <small>Free key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>. It stays in this browser and is sent only to Google.</small>
+  </section>
+
+  <p id="status" role="status"></p>
+
+  <section class="card" id="result" hidden>
+    <p class="meta" id="rTag"></p>
+    <h2 id="rName"></h2>
+    <div class="sw" id="rSw"></div>
+    <p class="kv"><b>Effects:</b> <span id="rFx"></span></p>
+    <p class="kv"><b>Environment and background:</b> <span id="rEnv"></span></p>
+    <div class="box">
+      <div class="top"><h2>Descriptive prompt</h2><button class="copy main" data-t="rDesc">Copy prompt</button></div>
+      <p id="rDesc"></p>
+    </div>
+    <div class="box">
+      <div class="top"><h2>Style-only prompt (without subject)</h2><button class="copy" data-t="rStyle">Copy style prompt</button></div>
+      <p id="rStyle"></p>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+let mode = 'scan', img = null, busy = false;
+
+/* ---------- UI ---------- */
+function setMode(m){
+  mode = m;
+  $('#mScan').setAttribute('aria-pressed', m === 'scan');
+  $('#mAI').setAttribute('aria-pressed', m === 'ai');
+  $('#keyBox').style.display = m === 'ai' ? 'block' : 'none';
+  $('#goLink').textContent = 'Analyze';
+  if (img && m === 'scan') run();
+}
+$('#mScan').onclick = () => setMode('scan');
+$('#mAI').onclick = () => setMode('ai');
+try { $('#key').value = localStorage.getItem('gkey') || ''; } catch (e) {}
+
+function status(msg, err){ const s = $('#status'); s.textContent = msg || ''; s.className = err ? 'err' : ''; }
+
+function showPreview(src){
+  const d = $('#dropIn'); d.innerHTML = '';
+  const im = document.createElement('img'); im.src = src; im.alt = 'Selected image';
+  const b = document.createElement('span'); b.className = 'dark'; b.textContent = 'Choose a different image'; b.style.display = 'inline-block';
+  d.append(im, b);
+}
+const DEFAULT_TXT = 'Tap to choose an image, or drop / paste one here';
+$('#clear').onclick = () => {
+  img = null; $('#dropIn').textContent = DEFAULT_TXT;
+  $('#url').value = ''; $('#result').hidden = true; status('');
+};
+
+/* ---------- loading images ---------- */
+const WS = u => 'https://wsrv.nl/?url=' + encodeURIComponent(u);
+function loadImg(src, cors){
+  return new Promise((ok, no) => {
+    const i = new Image(); if (cors) i.crossOrigin = 'anonymous';
+    i.onload = () => ok(i); i.onerror = () => no(new Error('load')); i.src = src;
+  });
+}
+const readFile = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(f); });
+async function fromFile(f){
+  if (!f) return;
+  status('Reading image…');
+  try { img = await loadImg(await readFile(f)); showPreview(img.src); status(''); run(); }
+  catch (e) { status('Your browser could not open this file. Try a JPG, PNG or WebP image (iPhone HEIC photos need converting).', true); }
+}
+const PROXIES = [
+  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  u => 'https://corsproxy.io/?url=' + encodeURIComponent(u)
+];
+async function pageImage(u){
+  for (const p of PROXIES) {
+    try {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 9000);
+      const r = await fetch(p(u), { signal: ctl.signal }); clearTimeout(t);
+      if (!r.ok) continue;
+      const html = await r.text();
+      const m = html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)(?::src)?["'][^>]*content=["']([^"']+)["']/i)
+        || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]*(?:property|name)=["'](?:og:image|twitter:image)["']/i)
+        || html.match(/https:\/\/i\.pinimg\.com\/[^"'\s\\]+\.(?:jpg|jpeg|png|webp)/i);
+      if (m) return (m[1] || m[0]).replace(/&amp;/g, '&');
+    } catch (e) {}
+  }
+  return null;
+}
+async function fromLink(){
+  const m = $('#url').value.trim().match(/https?:\/\/[^\s]+/);
+  if (!m) return status('Paste a full link starting with http or https.', true);
+  const u = m[0]; $('#url').value = u;
+  status('Loading image…');
+  let found = null;
+  if (/^https?:\/\/(?:[\w-]+\.)*(?:pin\.it|pinterest\.[a-z.]+)\//i.test(u)) {
+    status('Reading the Pinterest pin…');
+    try { found = await loadImg('/api/pin?img=1&url=' + encodeURIComponent(u), true); } catch (e) {}
+  }
+  if (!found) { try { found = await loadImg(u, true); } catch (e) {} }
+  if (!found) { try { found = await loadImg(WS(u), true); } catch (e) {} }
+  if (!found) {
+    status('Finding the image on that page…');
+    const src = await pageImage(u);
+    if (src) {
+      try { found = await loadImg(src, true); } catch (e) {}
+      if (!found) { try { found = await loadImg(WS(src), true); } catch (e) {} }
+    }
+  }
+  if (!found) return status('Could not get an image from that link. On Pinterest, touch and hold the image, choose Copy image address (or Save image), then paste it here or upload it.', true);
+  img = found; showPreview(img.src); status(''); run();
+}
+$('#file').onchange = e => { const f = e.target.files[0]; e.target.value = ''; fromFile(f); };
+const dz = $('#drop');
+['dragover', 'dragenter'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add('over'); }));
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f) return fromFile(f);
+  const u = (e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain') || '').split('\n')[0].trim();
+  if (u) { $('#url').value = u; fromLink(); }
+});
+['dragover', 'drop'].forEach(t => window.addEventListener(t, e => e.preventDefault()));
+document.addEventListener('paste', e => { const f = [...(e.clipboardData?.files || [])][0]; if (f) fromFile(f); });
+$('#goLink').onclick = fromLink;
+$('#url').onkeydown = e => { if (e.key === 'Enter') fromLink(); };
+$('#url').addEventListener('paste', () => setTimeout(fromLink, 60));
+$('#goAI').onclick = () => img ? run() : status('Upload an image or insert a link first.', true);
+
+/* ---------- free visual scan ---------- */
+function sample(i, max){
+  const s = Math.min(1, max / Math.max(i.naturalWidth, i.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(i.naturalWidth * s)); c.height = Math.max(1, Math.round(i.naturalHeight * s));
+  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(i, 0, 0, c.width, c.height);
+  return { c, d: x.getImageData(0, 0, c.width, c.height) };
+}
+const hex = (r, g, b) => '#' + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase();
+function cname(r, g, b){
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  let h = 0;
+  if (d) { h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360; }
+  if (l < .1) return 'Obsidian Black';
+  if (l > .93) return 'Ivory White';
+  if (s < .14) return l < .35 ? 'Charcoal Grey' : l < .65 ? 'Slate Grey' : 'Soft Grey';
+  const n = h < 15 || h >= 345 ? 'Crimson' : h < 40 ? 'Burnt Orange' : h < 65 ? 'Golden Yellow' : h < 160 ? 'Emerald Green'
+    : h < 195 ? 'Teal' : h < 250 ? 'Cobalt Blue' : h < 290 ? 'Violet' : h < 330 ? 'Magenta' : 'Rose Pink';
+  return (l < .25 ? 'Deep ' : l > .72 ? 'Soft ' : '') + n;
+}
+function palette(i){
+  const { d } = sample(i, 120), p = d.data, bins = {};
+  for (let k = 0; k < p.length; k += 4) {
+    const key = (p[k] >> 5) << 6 | (p[k + 1] >> 5) << 3 | (p[k + 2] >> 5);
+    const b = bins[key] || (bins[key] = { n: 0, r: 0, g: 0, b: 0 });
+    b.n++; b.r += p[k]; b.g += p[k + 1]; b.b += p[k + 2];
+  }
+  const out = [];
+  Object.values(bins).sort((a, b) => b.n - a.n).forEach(b => {
+    const c = [b.r / b.n, b.g / b.n, b.b / b.n];
+    if (out.length < 4 && out.every(o => Math.hypot(o.c[0] - c[0], o.c[1] - c[1], o.c[2] - c[2]) > 70)) out.push({ c, name: cname(...c), hex: hex(...c) });
+  });
+  return out.map(o => ({ name: o.name, hex: o.hex }));
+}
+const STYLES = {
+  neon: ['Neon & Nocturnal Chromatic Lighting', 'luminous digital illustration or night photography with saturated specular glow', 'deep nocturnal shadows pierced by electric high-chroma reflections', 'pop-art bold color blocking, dramatic edge vignette', 'a dark nocturnal or neon-lit night environment pierced by vivid color highlights', 'spotlight-centered illumination falling off into deep vignetted edges'],
+  noir: ['Moody Low-Key Chiaroscuro', 'cinematic photography or painterly digital art with crushed blacks', 'deep shadows carving the subject with narrow pools of light', 'heavy vignette, soft film grain, restrained contrast roll-off', 'a dim, atmospheric interior or night scene with hazy depth', 'a single directional key light with dark falloff'],
+  pop: ['Vibrant Pop-Art Color Blocking', 'flat graphic illustration with bold saturated fills', 'crisp shapes, strong silhouettes and high-chroma contrast', 'flat color blocking, clean edges, minimal shading', 'a bright, uncluttered backdrop that keeps the shapes readable', 'even, shadowless studio-style illumination'],
+  airy: ['High-Key Airy Minimalism', 'soft-focus photography or clean digital illustration with generous negative space', 'gentle tonal transitions and delicate low-contrast detail', 'soft diffusion, subtle haze, pale tonal gradients', 'a bright, open, clutter-free environment with calm depth', 'diffused natural daylight with no hard shadows'],
+  warm: ['Warm Golden-Hour Analog', 'film-style photography or painterly illustration with sun-baked tones', 'amber highlights, honeyed midtones and soft long shadows', 'film grain, light bloom, gentle warm color grading', 'a sunlit setting with layered atmospheric depth', 'low raking golden light from the side'],
+  cool: ['Cool Muted Cinematic Grade', 'cinematic photography or digital matte painting with desaturated cool tones', 'steel-blue shadows, restrained highlights and quiet contrast', 'teal-leaning color grade, soft haze, light vignette', 'an overcast or twilight environment with measured depth', 'soft ambient light with a cool color cast']
+};
+function scan(i){
+  const { d } = sample(i, 120), p = d.data, w = d.width, h = d.height;
+  let L = 0, S = 0, wm = 0, n = 0, cL = 0, cn = 0, eL = 0, en = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const k = (y * w + x) * 4, r = p[k], g = p[k + 1], b = p[k + 2];
+    const l = (.2126 * r + .7152 * g + .0722 * b) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    L += l; S += mx ? (mx - mn) / mx : 0; wm += r > b ? 1 : 0; n++;
+    const nx = x / w, ny = y / h;
+    if (nx > .25 && nx < .75 && ny > .25 && ny < .75) { cL += l; cn++; }
+    else if (nx < .12 || nx > .88 || ny < .12 || ny > .88) { eL += l; en++; }
+  }
+  L /= n; S /= n; wm /= n;
+  const key = L < .38 ? (S > .4 ? 'neon' : 'noir') : S > .5 ? 'pop' : (L > .68 && S < .3) ? 'airy' : wm > .62 ? 'warm' : 'cool';
+  const st = STYLES[key], pal = palette(i);
+  const vig = en && cn && (eL / en) < (cL / cn) * .85;
+  const ratio = i.naturalWidth / i.naturalHeight;
+  const orient = ratio < .85 ? 'Vertical portrait-oriented' : ratio > 1.2 ? 'Horizontal landscape-oriented' : 'Square';
+  return { key, st, pal, vig, orient };
+}
+function build(name, medium, feat, fx, env, light, pal, orient){
+  const pn = pal.map(c => c.name.toLowerCase()).join(', '), ph = pal.map(c => c.hex).join(', ');
+  const core = `${name} style, executed in ${medium}, featuring ${feat}. Built with ${fx}. `;
+  const tail = `Lit by ${light}, in a curated limited-color harmony anchored by ${pn} (${ph}).`;
+  return {
+    desc: `${orient} composition rendered in ${core}Set in ${env}. ${tail}`,
+    style: `${core}Background treatment with ${env}. ${tail}`
+  };
+}
+function scanResult(i){
+  const r = scan(i), [name, medium, feat, fx, env, light] = r.st;
+  const fxText = r.vig && !/vignette/.test(fx) ? fx + ', dramatic edge vignette' : fx;
+  const t = build(name, medium, feat, fxText, env, light, r.pal, r.orient);
+  return { name, tag: medium.charAt(0).toUpperCase() + medium.slice(1), pal: r.pal, fx: fxText, env, ...t };
+}
+
+/* ---------- Gemini AI ---------- */
+async function aiResult(i){
+  const key = $('#key').value.trim();
+  if (!key) throw new Error('Paste your Gemini API key first.');
+  try { localStorage.setItem('gkey', key); } catch (e) {}
+  const { c } = sample(i, 1024), data = c.toDataURL('image/jpeg', .85).split(',')[1];
+  const pal = palette(i), orient = i.naturalWidth / i.naturalHeight < .85 ? 'Vertical portrait' : i.naturalWidth / i.naturalHeight > 1.2 ? 'Horizontal landscape' : 'Square';
+  const ask = `Analyze the VISUAL ART STYLE of this image: medium, rendering technique, lighting, color treatment, texture, effects, mood. Return JSON only with keys: name (a short style title), tagline (one line describing the medium), effects (short phrase), environment (short phrase on background and depth), descriptive_prompt (an image-generation prompt that recreates the composition and style, starting with the ${orient} orientation and ending with the palette hex codes ${pal.map(p => p.hex).join(', ')}), style_prompt (same style description with no subject and no composition, reusable as a style reference, also ending with the palette hex codes).`;
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(key), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: ask }, { inline_data: { mime_type: 'image/jpeg', data } }] }], generationConfig: { responseMimeType: 'application/json' } })
+  });
+  const j = await res.json();
+  if (!res.ok) throw new Error(j.error?.message || 'Gemini request failed.');
+  const o = JSON.parse(j.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim());
+  return { name: o.name, tag: o.tagline, pal, fx: o.effects, env: o.environment, desc: o.descriptive_prompt, style: o.style_prompt };
+}
+
+/* ---------- render ---------- */
+async function run(){
+  if (busy || !img) return; busy = true;
+  status(mode === 'ai' ? 'Gemini is analyzing the image…' : 'Scanning…');
+  try {
+    const r = mode === 'ai' ? await aiResult(img) : scanResult(img);
+    $('#rTag').textContent = r.tag || ''; $('#rName').textContent = r.name;
+    $('#rFx').textContent = r.fx; $('#rEnv').textContent = r.env;
+    $('#rDesc').textContent = r.desc; $('#rStyle').textContent = r.style;
+    const sw = $('#rSw'); sw.innerHTML = '';
+    r.pal.forEach(c => {
+      const s = document.createElement('span'), i = document.createElement('i'), code = document.createElement('code');
+      i.style.background = c.hex; code.textContent = c.hex;
+      s.append(i, document.createTextNode(c.name + ' '), code); sw.append(s);
+    });
+    $('#result').hidden = false; status('');
+    $('#result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) {
+    status(e.message === 'load' ? 'The image could not be read.' : e.message, true);
+  }
+  busy = false;
+}
+document.querySelectorAll('.copy').forEach(b => b.onclick = async () => {
+  const t = $('#' + b.dataset.t).textContent, old = b.textContent;
+  try { await navigator.clipboard.writeText(t); }
+  catch (e) { const a = document.createElement('textarea'); a.value = t; document.body.append(a); a.select(); document.execCommand('copy'); a.remove(); }
+  b.textContent = 'Copied'; setTimeout(() => b.textContent = old, 1400);
+});
+</script>
+</body>
+</html>
